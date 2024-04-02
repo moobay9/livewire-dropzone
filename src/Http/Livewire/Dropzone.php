@@ -10,7 +10,7 @@ use Livewire\Attributes\Locked;
 use Livewire\Attributes\Modelable;
 use Livewire\Attributes\On;
 use Livewire\Component;
-use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Livewire\Features\SupportFileUploads\{TemporaryUploadedFile, FileUploadConfiguration};
 use Livewire\WithFileUploads;
 
 class Dropzone extends Component
@@ -95,6 +95,7 @@ class Dropzone extends Component
     public function onFileAdded(array $file): void
     {
         $this->files = $this->multiple ? array_merge($this->files, [$file]) : [$file];
+        $this->dispatch('filesCount', count: count($this->files));
     }
 
     /**
@@ -107,11 +108,17 @@ class Dropzone extends Component
             $isNotTmpFilename = $file['tmpFilename'] !== $tmpFilename;
 
             if (! $isNotTmpFilename) {
-                unlink($file['path']);
+                if(FileUploadConfiguration::isUsingS3()) {
+                    $f = new TemporaryUploadedFile($tmpFilename, FileUploadConfiguration::disk());
+                    $f->delete();
+                } else {
+                    unlink($file['path']);
+                }
             }
 
             return $isNotTmpFilename;
         });
+        $this->dispatch('filesCount', count: count($this->files));
     }
 
     /**
